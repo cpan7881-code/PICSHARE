@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>সত্যম শিবম জেরক্স সেন্টার - ডিজিটাল ফাইল পোর্টাল</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <!-- Firebase SDK (v8 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+        body { font-family: 'Hind Siliguri', sans-serif; background-color: #f8fafc; }
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white text-indigo-700 p-2.5 rounded-xl font-bold text-xl shadow-md">
+                    <i class="fa-solid fa-print"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-xl leading-tight">সত্যম শিবম জেরক্স সেন্টার</h1>
+                    <p class="text-xs text-indigo-200">লাইভ ক্লাউড ফাইল ও ছবি আপলোড পোর্টাল</p>
+                </div>
+            </div>
+
+            <!-- Role Switcher -->
+            <div class="flex items-center space-x-2 bg-indigo-900/60 p-1.5 rounded-xl border border-indigo-500/30">
+                <button id="navAdminBtn" onclick="switchView('admin')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-950 shadow">
+                    <i class="fa-solid fa-desktop mr-1.5"></i> দোকানদার ড্যাশবোর্ড
+                </button>
+                <button id="navCustomerBtn" onclick="switchView('customer')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white">
+                    <i class="fa-solid fa-mobile-screen-button mr-1.5"></i> গ্রাহক আপলোড
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- VIEW 1: SHOPKEEPER ADMIN DASHBOARD -->
+        <section id="adminView" class="space-y-6">
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500">মোট প্রাপ্ত ফাইল</p>
+                        <h3 id="statTotal" class="text-2xl font-extrabold text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500">অপেক্ষমাণ (Pending)</p>
+                        <h3 id="statPending" class="text-2xl font-extrabold text-amber-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500">প্রিন্ট সম্পন্ন</p>
+                        <h3 id="statPrinted" class="text-2xl font-extrabold text-emerald-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-bolt text-amber-500"></i> লাইভ ফাইল তালিকা (Real-time)
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">কাস্টমার ফোন থেকে আপলোড করলে সাথে সাথে এখানে চলে আসবে</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="openQrModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-4 py-2.5 rounded-xl text-xs border border-indigo-200 shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-qrcode"></i> শপ QR Code
+                    </button>
+                </div>
+            </div>
+
+            <!-- Files Grid -->
+            <div id="fileGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-300">
+                <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
+                    <i class="fa-regular fa-folder-open"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-700">কোনো ফাইল পাওয়া যায়নি</h3>
+                <p class="text-xs text-slate-500 mt-1">গ্রাহক কাউন্টারের QR Code স্ক্যান করে ছবি আপলোড করলে এখানে দেখাবে।</p>
+            </div>
+        </section>
+
+        <!-- VIEW 2: CUSTOMER UPLOAD SECTION -->
+        <section id="customerView" class="hidden max-w-lg mx-auto space-y-5">
+            <div class="bg-gradient-to-br from-indigo-700 to-blue-700 text-white p-6 rounded-3xl shadow-xl text-center space-y-3">
+                <span class="bg-white/20 text-xs px-3 py-1 rounded-full font-medium inline-block">সত্যম শিবম জেরক্স সেন্টার</span>
+                <h2 class="text-2xl font-extrabold">ছবি ও ফাইল জমা দিন</h2>
+                <p class="text-xs text-indigo-100">কাউন্টারে দ্রুত প্রিন্ট করার জন্য আপনার ফাইলটি সিলেক্ট করে পাঠান</p>
+            </div>
+
+            <!-- Form Card -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">আপনার নাম (Customer Name)</label>
+                        <input type="text" id="custName" placeholder="যেমন: বিশ্বজিৎ রয়" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">মোবাইল নম্বর (Phone Number)</label>
+                        <input type="tel" id="custPhone" placeholder="যেমন: 9876543210" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">প্রিন্ট নোট (Instructions)</label>
+                        <input type="text" id="custNote" placeholder="যেমন: ২ কপি, কালার প্রিন্ট" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                </div>
+
+                <!-- File Input -->
+                <div onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/40 p-6 rounded-2xl text-center cursor-pointer">
+                    <input type="file" id="fileInput" accept="image/*,application/pdf" class="hidden" onchange="handleFileSelect(event)">
+                    <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-2 text-xl">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <p class="font-bold text-slate-700 text-sm" id="fileNameDisplay">ছবি বা PDF বেছে নিন</p>
+                    <p class="text-xs text-slate-400 mt-1">Image বা PDF ফাইল সমর্থিত</p>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="uploadProgress" class="hidden space-y-1">
+                    <div class="flex justify-between text-xs text-indigo-600 font-semibold">
+                        <span>ক্লাউডে আপলোড হচ্ছে...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div id="progressBar" class="bg-indigo-600 h-full w-0 transition-all"></div>
+                    </div>
+                </div>
+
+                <button id="uploadBtn" onclick="uploadToFirebase()" disabled class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> দোকানদারের কম্পিউটারে পাঠান
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- QR Modal -->
+    <div id="qrModal" class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 relative">
+            <button onclick="closeQrModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800">কাউন্টার QR Code</h3>
+            <div class="bg-slate-50 p-4 rounded-2xl flex justify-center">
+                <div id="qrcode"></div>
+            </div>
+            <button onclick="window.print()" class="w-full bg-slate-800 text-white text-xs font-bold py-3 rounded-xl">
+                <i class="fa-solid fa-print mr-1"></i> QR Code প্রিন্ট করুন
+            </button>
+        </div>
+    </div>
+
+    <!-- Hidden Print Area for Selected Image -->
+    <div id="printArea" class="hidden">
+        <img id="printImage" src="" class="max-w-full">
+    </div>
+
+    <script>
+        // ------------------------------------------------------------------
+        // ১. আপনার Firebase কনফিগারেশন আপডেট করুন
+        // ------------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Firebase ইনিশিয়াল্যিজেশন
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const storage = firebase.storage();
+
+        let selectedFile = null;
+        let filesData = [];
+
+        // App Load
+        window.onload = function() {
+            listenRealtimeFiles();
+            setupQrCode();
+        };
+
+        // ২. Firebase Realtime Data Listening (স্বয়ংক্রিয় আপডেট)
+        function listenRealtimeFiles() {
+            db.ref('uploads').on('value', snapshot => {
+                const data = snapshot.val();
+                filesData = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        filesData.unshift({ id: key, ...data[key] });
+                    });
+                }
+                renderFiles();
+                updateStats();
+            });
+        }
+
+        function renderFiles() {
+            const grid = document.getElementById('fileGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            grid.innerHTML = '';
+
+            if (filesData.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filesData.forEach(file => {
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between";
+                const isImage = file.type.includes('image');
+                const isPrinted = file.status === 'printed';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="h-44 bg-slate-100 relative flex items-center justify-center overflow-hidden border-b border-slate-100">
+                            ${isImage 
+                                ? `<img src="${file.url}" class="w-full h-full object-cover">`
+                                : `<div class="text-rose-500 text-5xl"><i class="fa-solid fa-file-pdf"></i></div>`
+                            }
+                            <span class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isPrinted ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}">
+                                ${isPrinted ? 'প্রিন্ট সম্পন্ন' : 'অপেক্ষমাণ'}
+                            </span>
+                        </div>
+                        <div class="p-4 space-y-2">
+                            <h4 class="font-bold text-sm text-slate-800 truncate">${file.fileName}</h4>
+                            <div class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl space-y-1">
+                                <p class="font-semibold"><i class="fa-solid fa-user text-indigo-500 mr-1"></i> ${file.customerName}</p>
+                                ${file.customerPhone ? `<p><i class="fa-solid fa-phone mr-1 text-slate-400"></i> ${file.customerPhone}</p>` : ''}
+                                ${file.note ? `<p class="text-indigo-600 font-medium border-t pt-1"><i class="fa-solid fa-note-sticky mr-1"></i> ${file.note}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <button onclick="toggleStatus('${file.id}', '${file.status}')" class="px-2.5 py-1.5 rounded-lg border text-[11px] ${isPrinted ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-emerald-300 bg-emerald-50 text-emerald-700'}">
+                            ${isPrinted ? 'পেন্ডিং করুন' : 'মার্ক ডান'}
+                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <a href="${file.url}" target="_blank" download="${file.fileName}" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-download"></i> সেভ
+                            </a>
+                            <button onclick="directPrint('${file.url}')" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-print"></i> প্রিন্ট
+                            </button>
+                            <button onclick="deleteFile('${file.id}')" class="text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            selectedFile = file;
+            document.getElementById('fileNameDisplay').innerText = file.name;
+            document.getElementById('uploadBtn').disabled = false;
+        }
+
+        // ৩. Firebase Cloud-এ ফাইল আপলোড
+        function uploadToFirebase() {
+            if (!selectedFile) return;
+
+            const name = document.getElementById('custName').value.trim() || 'বেনামী গ্রাহক';
+            const phone = document.getElementById('custPhone').value.trim();
+            const note = document.getElementById('custNote').value.trim();
+
+            const progressContainer = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            progressContainer.classList.remove('hidden');
+            uploadBtn.disabled = true;
+
+            const storageRef = storage.ref('customer_files/' + Date.now() + '_' + selectedFile.name);
+            const uploadTask = storageRef.put(selectedFile);
+
+            uploadTask.on('state_changed', 
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    progressBar.style.width = progress + '%';
+                    progressPercent.innerText = Math.round(progress) + '%';
+                }, 
+                (error) => {
+                    alert('আপলোড ব্যর্থ হয়েছে: ' + error.message);
+                    uploadBtn.disabled = false;
+                }, 
+                () => {
+                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        db.ref('uploads').push({
+                            customerName: name,
+                            customerPhone: phone,
+                            note: note,
+                            fileName: selectedFile.name,
+                            url: downloadURL,
+                            type: selectedFile.type,
+                            status: 'pending',
+                            timestamp: new Date().toLocaleTimeString()
+                        }).then(() => {
+                            alert('আপনার ফাইল সফলভাবে পৌঁছাল!');
+                            resetForm();
+                            switchView('admin');
+                        });
+                    });
+                }
+            );
+        }
+
+        function resetForm() {
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('custName').value = '';
+            document.getElementById('custPhone').value = '';
+            document.getElementById('custNote').value = '';
+            document.getElementById('fileNameDisplay').innerText = 'ছবি বা PDF বেছে নিন';
+            document.getElementById('uploadProgress').classList.add('hidden');
+            document.getElementById('uploadBtn').disabled = true;
+        }
+
+        function toggleStatus(id, currentStatus) {
+            const newStatus = currentStatus === 'printed' ? 'pending' : 'printed';
+            db.ref('uploads/' + id).update({ status: newStatus });
+        }
+
+        function deleteFile(id) {
+            if (confirm('ফাইলটি ডিলিট করতে চান?')) {
+                db.ref('uploads/' + id).remove();
+            }
+        }
+
+        function directPrint(url) {
+            const printImg = document.getElementById('printImage');
+            printImg.src = url;
+            document.getElementById('printArea').classList.remove('hidden');
+            setTimeout(() => {
+                window.print();
+                document.getElementById('printArea').classList.add('hidden');
+            }, 500);
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').innerText = filesData.length;
+            document.getElementById('statPending').innerText = filesData.filter(f => f.status === 'pending').length;
+            document.getElementById('statPrinted').innerText = filesData.filter(f => f.status === 'printed').length;
+        }
+
+        function switchView(view) {
+            if (view === 'admin') {
+                document.getElementById('adminView').classList.remove('hidden');
+                document.getElementById('customerView').classList.add('hidden');
+            } else {
+                document.getElementById('adminView').classList.add('hidden');
+                document.getElementById('customerView').classList.remove('hidden');
+            }
+        }
+
+        function setupQrCode() {
+            const qrcodeContainer = document.getElementById("qrcode");
+            if (qrcodeContainer) {
+                qrcodeContainer.innerHTML = "";
+                new QRCode(qrcodeContainer, {
+                    text: window.location.href,
+                    width: 150,
+                    height: 150
+                });
+            }
+        }
+
+        function openQrModal() { document.getElementById('qrModal').classList.remove('hidden'); }
+        function closeQrModal() { document.getElementById('qrModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
